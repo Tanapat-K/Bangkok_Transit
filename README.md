@@ -38,6 +38,9 @@ The program will load the station data, print the list of available stations, an
 
 ## Analysis and Justification
 Graph Representation: Adjacency Map
+ The Adjacency Map model is the best choice for this transit network primarily	 because the network is sparse (stations have very few connections), and the model offers the most efficient balance of space and operational speed for sparse graphs.
+The core reason this structure is ideal is Space Efficiency. A transit network is naturally sparse—a station might link to only 2 or 3 neighbors, while an Adjacency Matrix would reserve space for every possible connection, resulting in a large amount of wasted memory O(V^2). The Adjacency Map model only stores the existing connections (E) for each station (V), making its space complexity O(V + E), which is far more efficient.
+The second major benefit is Speed for Traversal. Dijkstra's algorithm relies on quickly finding all neighbors of a given station to perform relaxation. In the Adjacency Map, finding all neighbors is exceptionally fast, taking time proportional to the station's degree O(degree(v)). This low complexity is crucial because the maximum number of tracks leaving any single station is very small, allowing the algorithm to traverse the network with optimal efficiency. This speed directly contributes to the overall O(E log V) complexity of your pathfinding solution.
 The graph is implemented using an Adjacency Map model, realized through the AdjacencyMapGraph<V, E> class.
 
 ### Structure: Each station (Vertex) stores two ProbeHashMaps: one for outgoing edges and one for incoming edges. The map keys are the neighboring Vertices, and the values are the Edges (connections) themselves.
