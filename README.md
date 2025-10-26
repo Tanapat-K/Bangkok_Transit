@@ -2,13 +2,13 @@
 
 This repository contains the source code for a console application designed to calculate the optimal travel route between any two stations on the Bangkok rail transit system. It leverages graph theory, specifically Dijkstra's algorithm, to minimize either total estimated travel time or the number of transfers.
 
-Compilation and Execution
+## Compilation and Execution
 This project is structured using several interdependent data structure files. All helper files (Entry.java, Graph.java, Heap.java, etc.) must be present in the project structure for successful compilation.
 
-Prerequisites
+## Prerequisites
 Java Development Kit (JDK) 8 or higher.
 
-The project assumes a specific directory structure (e.g., src/BTS/connections.csv).
+The project assumes a specific directory structure (e.g., src/BTS/connections.csv). Make sure it the correcte directory on your device
 
 Compilation Steps
 Gather Helper Files: Ensure all necessary interfaces and abstract classes are present:
@@ -25,10 +25,10 @@ LinkedPositionalList.java, Map.java, Position.java, PositionalList.java, Priorit
 
 ProbeHashMap.java, Vertex.java
 
-Compile: Compile all .java files from your project root or src directory. If using IntelliJ IDEA, simply building the project handles this automatically.
+## Compile: Compile all .java files from your project root or src directory. If using IntelliJ IDEA, simply building the project handles this automatically.
 
 
-******Execute: Run the Main class.******
+### ******Execute: Run the Main class.******
 
 
 The program will load the station data, print the list of available stations, and then prompt the user for the starting and destination stations, followed by the choice of optimization (Time or Transfers).
