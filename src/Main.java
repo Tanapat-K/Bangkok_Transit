@@ -4,47 +4,56 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Main application class for the Bangkok Transit shortest path finder.
+ * This class handles graph initialization, data loading, user input,
+ * Dijkstra's pathfinding (minimizing Time or Transfers), and formatted route output.
+ */
 public class Main {
 
-    //Graph Interface
-    private Graph<String, String> railwayGraph;
+    // --- Core Data Structures & Configuration ---
 
-    private Map<String, Vertex<String>> stations; //MapADT for Dijkstra to detect the passed station
-    private int stationtime = 3; //second (Weight)
-    private int interchangetime = 10; //second (Weight)
+    // The core graph structure implemented using an AdjacencyMap.
+    private Graph<String, String> TransitGraph;
 
-    public List<String> MatainanceList = new ArrayList<>(); //The list of station that currently unavaliable
+    // Map to provide O(1) lookup of a Vertex object given its String name (station name).
+    private Map<String, Vertex<String>> stations;
 
-    // MAP for Abbreviations: Stores long name -> short name
+    // Weights (time in seconds) applied to edges for time-based Dijkstra's.
+    private int stationtime = 3; // Time cost for travel between two regular stations(minute).
+    private int interchangetime = 10; // Time cost (penalty) for transferring between two different lines(minute).
+
+    // Map used to shorten long station names for better display formatting (e.g., QSNCC).
     private static final Map<String, String> ABBREVIATION_MAP = new HashMap<>();
 
     static {
-        // Initialize abbreviations here
+        // Initialize abbreviations here to be applied before displaying station list.
         ABBREVIATION_MAP.put("Queen Sirikit National Convention Centre", "QSNCC");
-        // Add any other long station names you want to abbreviate here
+        // Add any other long station names here
     }
 
+    /**
+     * Constructor: Initializes the graph as undirected and sets up the station map.
+     */
     public Main() {
-        // Initialize as an undirected graph
-        this.railwayGraph = new AdjacencyMapGraph<>(false);
+        this.TransitGraph = new AdjacencyMapGraph<>(false);
         this.stations = new HashMap<>();
     }
 
     /**
-     * Helper method to apply abbreviations to a station name.
+     * Utility method: Applies defined abbreviations to a station name for output clarity.
      * @param originalName The full station name.
-     * @return The abbreviated name if found, otherwise the original name.
+     * @return The abbreviated name if a mapping exists, otherwise the original name.
      */
     private String applyAbbreviations(String originalName) {
         return ABBREVIATION_MAP.getOrDefault(originalName, originalName);
     }
 
-    // Reverse map for the disclaimer
+    // Reverse map for the disclaimer: Maps abbreviated name -> original full name.
     private static final Map<String, String> DISCLOSURE_MAP = new HashMap<>();
     static {
         for (Map.Entry<String, String> entry : ABBREVIATION_MAP.entrySet()) {
@@ -52,14 +61,7 @@ public class Main {
         }
     }
 
-
-    public void addMaintenanceList(List<String> station){
-        MatainanceList.addAll(station);
-    }
-
-    public void removeMaintenanceList(String station){
-        MatainanceList.remove(station);
-    }
+    // --- Configuration and Data Loading Methods ---
 
     public void setstationtime(int stationtime){
         this.stationtime = stationtime;
@@ -69,16 +71,16 @@ public class Main {
         this.interchangetime = interchangetime;
     }
 
-    /**load all of the connected lines and stations to the Graph Structure using AdjacentMapGraph
-     * using java.io.file
-     * @param connectionPATH // the Path of the all connection of the Railway
+    /**
+     * Loads graph data from a CSV file, inserting Vertices for stations
+     * and Edges for connections (labeled by line name).
+     * @param connectionPATH The file path of the connection data.
      */
     public void loadConnections(String connectionPATH) {
         try (BufferedReader br = new BufferedReader(new FileReader(connectionPATH))) {
             String line;
             br.readLine(); // Skip header line
 
-            //read the line and skip the comma and place in 3 variable
             while ((line = br.readLine()) != null) {
                 if (line.trim().startsWith("#") || line.trim().isEmpty()) {
                     continue;
@@ -93,23 +95,22 @@ public class Main {
                 String stationNameB = values[1].trim();
                 String railwayLine = values[2].trim();
 
-                // Get or create vertex for station A
+                // Ensure both station vertices exist.
                 Vertex<String> vertexA = stations.get(stationNameA);
                 if (vertexA == null) {
-                    vertexA = railwayGraph.insertVertex(stationNameA);
+                    vertexA = TransitGraph.insertVertex(stationNameA);
                     stations.put(stationNameA, vertexA);
                 }
 
-                // Get or create vertex for station B
                 Vertex<String> vertexB = stations.get(stationNameB);
                 if (vertexB == null) {
-                    vertexB = railwayGraph.insertVertex(stationNameB);
+                    vertexB = TransitGraph.insertVertex(stationNameB);
                     stations.put(stationNameB, vertexB);
                 }
 
-                // Insert an edge between the two stations, if it doesn't exist yet
-                if (railwayGraph.getEdge(vertexA, vertexB) == null) {
-                    railwayGraph.insertEdge(vertexA, vertexB, railwayLine);
+                // Insert the connection (Edge) if not already present.
+                if (TransitGraph.getEdge(vertexA, vertexB) == null) {
+                    TransitGraph.insertEdge(vertexA, vertexB, railwayLine);
                 }
             }
         } catch (IOException e) {
@@ -119,7 +120,15 @@ public class Main {
 
     }
 
+    // --- Pathfinding Implementation (Dijkstra's) ---
 
+    /**
+     * Finds the **Shortest Path** minimizing **Total Travel Time** using Dijkstra's algorithm.
+     * Weights are derived from 'stationtime' and 'interchangetime'.
+     * @param startStationName The starting station name.
+     * @param endStationName The destination station name.
+     * @return A List of Vertices representing the time-optimized path.
+     */
     public List<Vertex<String>> findShortestPath(String startStationName, String endStationName) {
         Vertex<String> startVertex = stations.get(startStationName);
         Vertex<String> endVertex = stations.get(endStationName);
@@ -129,19 +138,16 @@ public class Main {
             return null;
         }
 
-        // Priority queue stores entries of <Distance, Vertex>
+        // Standard Dijkstra setup: Priority Queue (PQ), Distance Map, Predecessor Map.
         PriorityQueue<Integer, Vertex<String>> pq = new Heap<>();
-        // Maps to store distances, predecessors (for path reconstruction), and entries in the PQ
         Map<Vertex<String>, Integer> dist = new HashMap<>();
         Map<Vertex<String>, Vertex<String>> predecessor = new HashMap<>();
         Map<Vertex<String>, Entry<Integer, Vertex<String>>> pqEntries = new HashMap<>();
 
-        // Initialize all distances to infinity and add to the distance map
-        for (Vertex<String> v : railwayGraph.vertices()) {
+        for (Vertex<String> v : TransitGraph.vertices()) {
             dist.put(v, Integer.MAX_VALUE);
         }
 
-        // Set distance for the start vertex to 0 and add to PQ
         dist.put(startVertex, 0);
         Entry<Integer, Vertex<String>> startEntry = new Entry<>(0, startVertex);
         pq.insert(startEntry.getKey(), startEntry.getValue());
@@ -151,33 +157,28 @@ public class Main {
             Entry<Integer, Vertex<String>> entry = pq.removeMin();
             Vertex<String> u = entry.getValue();
 
-            // If we've reached the destination, we can stop
             if (u.equals(endVertex)) {
                 break;
             }
 
-            // For each neighbor of the current vertex
+            // Relaxation Step: Check all outgoing neighbors.
+            for (Edge<String> e : TransitGraph.outgoingEdges(u)) {
+                Vertex<String> v = TransitGraph.opposite(u, e);
 
-            for (Edge<String> e : railwayGraph.outgoingEdges(u)) {
-                Vertex<String> v = railwayGraph.opposite(u, e);
-
-                // define the weight between interchange and regular (Time)
+                // Weight is either 'interchangetime' or 'stationtime'.
                 int weight = e.getElement().equals("Interchange") ? interchangetime : stationtime;
-
                 int newDist = dist.get(u) + weight;
 
-                // If the route exceeds the time limit, do not consider it further
-                if (newDist > 5000) {
+                if (newDist > 5000) { // Safety check against excessively long/infinite paths.
                     continue;
                 }
 
-                // If we found a shorter path to v
+                // If a shorter path is found.
                 if (newDist < dist.get(v)) {
-                    // Update distance and predecessor
                     dist.put(v, newDist);
                     predecessor.put(v, u);
 
-                    // re-insert. if PQ doesn't have key
+                    // Update the PQ with the newly found shorter path.
                     Entry<Integer, Vertex<String>> newEntry = new Entry<>(newDist, v);
                     pq.insert(newEntry.getKey(), newEntry.getValue());
                     pqEntries.put(v, newEntry);
@@ -189,6 +190,9 @@ public class Main {
     }
 
 
+    /**
+     * Nested class representing a multi-criteria key: Transfers (primary) and Time (secondary).
+     */
     private static class DistancePair implements Comparable<DistancePair> {
         int transfers;
         int time;
@@ -200,12 +204,21 @@ public class Main {
 
         @Override
         public int compareTo(DistancePair o) {
+            // Lexicographic comparison: Primary key is transfers.
             if (this.transfers != o.transfers) return Integer.compare(this.transfers, o.transfers);
+            // Secondary key is time.
             return Integer.compare(this.time, o.time);
         }
     }
 
 
+    /**
+     * Finds the path minimizing **Transfers** (primary key) and **Time** (secondary key)
+     * by using a specialized DistancePair weight in Dijkstra's.
+     * @param startStationName The starting station name.
+     * @param endStationName The destination station name.
+     * @return A List of Vertices representing the transfer-optimized path.
+     */
     public List<Vertex<String>> findPathFewestTransfers(String startStationName, String endStationName) {
         Vertex<String> startVertex = stations.get(startStationName);
         Vertex<String> endVertex = stations.get(endStationName);
@@ -219,7 +232,7 @@ public class Main {
         Map<Vertex<String>, DistancePair> dist = new HashMap<>();
         Map<Vertex<String>, Vertex<String>> predecessor = new HashMap<>();
 
-        for (Vertex<String> v : railwayGraph.vertices()) {
+        for (Vertex<String> v : TransitGraph.vertices()) {
             dist.put(v, new DistancePair(Integer.MAX_VALUE/2, Integer.MAX_VALUE/2));
         }
 
@@ -234,14 +247,17 @@ public class Main {
 
             if (u.equals(endVertex)) break;
 
-            for (Edge<String> e : railwayGraph.outgoingEdges(u)) {
-                Vertex<String> v = railwayGraph.opposite(u, e);
+            for (Edge<String> e : TransitGraph.outgoingEdges(u)) {
+                Vertex<String> v = TransitGraph.opposite(u, e);
 
+                // Calculate the weights based on the edge type.
                 int weight = e.getElement().equals("Interchange") ? interchangetime : stationtime;
-                int transferInc = e.getElement().equals("Interchange") ? 1 : 0;
+                int transferInc = e.getElement().equals("Interchange") ? 1 : 0; // Transfer penalty is 1.
 
                 DistancePair candidate = new DistancePair(du.transfers + transferInc, du.time + weight);
                 DistancePair current = dist.get(v);
+
+                // If the new path is lexicographically better (fewer transfers OR same transfers and less time).
                 if (candidate.compareTo(current) < 0) {
                     dist.put(v, candidate);
                     predecessor.put(v, u);
@@ -253,6 +269,13 @@ public class Main {
         return reconstructPath(predecessor, startVertex, endVertex);
     }
 
+    /**
+     * Reconstructs the path from destination to start using the predecessor map.
+     * @param predecessor Map storing the path taken to reach each vertex.
+     * @param start The starting vertex.
+     * @param end The destination vertex.
+     * @return The path as a forward-ordered list of vertices.
+     */
     private List<Vertex<String>> reconstructPath(Map<Vertex<String>, Vertex<String>> predecessor, Vertex<String> start, Vertex<String> end) {
         List<Vertex<String>> path = new ArrayList<>();
         Vertex<String> current = end;
@@ -262,23 +285,19 @@ public class Main {
             current = predecessor.get(current);
         }
 
-        if (path.isEmpty() || !Objects.equals(path.get(path.size() - 1),(start))) return null; // No path found
+        // Validation: Path found must end at the starting station.
+        if (path.isEmpty() || !Objects.equals(path.get(path.size() - 1),(start))) return null;
 
         Collections.reverse(path);
         return path;
     }
 
-    public class linePassinfo{
-        String name = null;
-        int numberofStation = 0;
 
-        public linePassinfo(String station, int numberofStation){
-            this.name = station;
-            this.numberofStation = numberofStation;
-        }
-    }
-
-    //Summing up the total weight from each edge to calculate for totaltime cost
+    /**
+     * Calculates the estimated total travel time in seconds by summing up all edge weights along the path.
+     * @param path The list of vertices representing the path.
+     * @return The total time in seconds.
+     */
     public int CalculateTotalTime(List<Vertex<String>> path) {
         if (path == null || path.size() <= 1) {
             return 0;
@@ -287,14 +306,18 @@ public class Main {
         for (int i = 0; i < path.size() - 1; i++) {
             Vertex<String> prev = path.get(i);
             Vertex<String> next = path.get(i + 1);
-            Edge<String> edge = railwayGraph.getEdge(prev, next);
+            Edge<String> edge = TransitGraph.getEdge(prev, next);
             if (edge == null) continue;
             totalTime += edge.getElement().equals("Interchange") ? interchangetime : stationtime;
         }
         return totalTime;
     }
 
-    // Validate station name
+    /**
+     * Validates if a station name (original or abbreviated) exists in the graph.
+     * @param stationName The name provided by the user.
+     * @return true if the station is found, false otherwise (prints "Invalid station").
+     */
     public boolean checkStationAvailable(String stationName) {
         if (stationName == null || stationName.trim().isEmpty()) {
             System.out.println("Station name is empty.");
@@ -303,14 +326,14 @@ public class Main {
 
         String query = stationName.trim();
 
-        // Check against original names first
+        // 1. Check against original names first
         for (String key : stations.keySet()) {
             if (key.equals(query)) {
                 return true;
             }
         }
 
-        // Check against abbreviated names
+        // 2. Check against abbreviated names
         for (Map.Entry<String, String> entry : ABBREVIATION_MAP.entrySet()) {
             if (entry.getValue().equals(query)) {
                 return true;
@@ -322,29 +345,29 @@ public class Main {
         return false;
     }
 
+    // --- Main Execution Block ---
+
     public static void main (String[] args) {
         Main bkkRailwayApp = new Main();
 
-        // Station List received and showed
+        // Load graph data from CSV and print basic statistics for setup verification.
         bkkRailwayApp.loadConnections("src/BTS/connections.csv");
+        System.out.println("Number of stations (vertices): " + bkkRailwayApp.TransitGraph.numVertices());
+        System.out.println("Number of connections (edges): " + bkkRailwayApp.TransitGraph.numEdges());
         System.out.println();
 
-        // 1. Get all station names into a simple list and apply abbreviations
+        // 1. Prepare and print the station list in a formatted, multi-column display.
         List<String> stationNames = new ArrayList<>();
-        for (Vertex<String> v : bkkRailwayApp.railwayGraph.vertices()) {
+        for (Vertex<String> v : bkkRailwayApp.TransitGraph.vertices()) {
             // Apply abbreviation for display
             stationNames.add(bkkRailwayApp.applyAbbreviations(v.getElement()));
         }
 
         int totalStations = stationNames.size();
         int numColumns = 3;
-        // Calculate the number of stations in each column to ensure even distribution
         int stationsPerColumn = (int) Math.ceil((double) totalStations / numColumns);
 
-        // Use a StringBuilder for efficient string concatenation
         StringBuilder sb = new StringBuilder();
-
-        // 2. Format and print the list in 3 columns (54 rows each)
         sb.append("Station List (Total: " + totalStations + ")\n");
         for (int i = 0; i < stationsPerColumn; i++) {
             // Column 1
@@ -352,24 +375,24 @@ public class Main {
                 sb.append(String.format("%-30s", stationNames.get(i)));
             }
 
-            // Column 2 (Starts after the first column ends)
+            // Column 2
             int indexCol2 = i + stationsPerColumn;
             if (indexCol2 < totalStations) {
                 sb.append(String.format("%-30s", stationNames.get(indexCol2)));
             } else {
-                sb.append(String.format("%-30s", "")); // Print empty space if no data
+                sb.append(String.format("%-30s", ""));
             }
 
-            // Column 3 (Starts after the second column ends)
+            // Column 3
             int indexCol3 = i + (2 * stationsPerColumn);
             if (indexCol3 < totalStations) {
                 sb.append(String.format("%s", stationNames.get(indexCol3)));
             }
 
-            sb.append("\n"); // Newline for the next row
+            sb.append("\n");
         }
 
-        System.out.println(sb.toString()); // Print the formatted table
+        System.out.println(sb.toString());
 
         // 3. Print the disclaimer for abbreviated stations
         if (!ABBREVIATION_MAP.isEmpty()) {
@@ -386,13 +409,14 @@ public class Main {
         java.io.Console console = System.console();
         java.util.Scanner scanner = null;
         if (console == null) {
-            // Fallback for IDEs where System.console() is null
             scanner = new java.util.Scanner(System.in);
             System.out.println("No console available. Falling back to standard input. Type 'exit' to quit.");
         }
 
+        // --- User Input and Validation ---
+
         String start = null;
-        // Prompt until a valid station is entered or user types 'exit'
+        // Prompt for starting station until valid input is received.
         while (true) {
             String input;
             if (console != null) {
@@ -406,9 +430,8 @@ public class Main {
                 if (scanner != null) scanner.close();
                 return;
             }
-            // Check station available using original or abbreviated name
             if (bkkRailwayApp.checkStationAvailable(input)) {
-                // Ensure the input is converted back to the official name for pathfinding if an abbreviation was used
+                // Convert input (which might be an abbreviation) back to the official full name for pathfinding.
                 start = ABBREVIATION_MAP.entrySet().stream()
                         .filter(e -> e.getValue().equals(input.trim()))
                         .map(Map.Entry::getKey)
@@ -416,10 +439,10 @@ public class Main {
                         .orElse(input.trim());
                 break;
             }
-            // else loop and let checkStationAvailable print suggestions
         }
 
         String end = null;
+        // Prompt for destination station until valid input is received.
         while (true) {
             String input;
             if (console != null) {
@@ -434,7 +457,7 @@ public class Main {
                 return;
             }
             if (bkkRailwayApp.checkStationAvailable(input)) {
-                // Ensure the input is converted back to the official name for pathfinding if an abbreviation was used
+                // Convert input (which might be an abbreviation) back to the official full name for pathfinding.
                 end = ABBREVIATION_MAP.entrySet().stream()
                         .filter(e -> e.getValue().equals(input.trim()))
                         .map(Map.Entry::getKey)
@@ -443,34 +466,38 @@ public class Main {
                 break;
             }
         }
-        // Do not close scanner yet; we'll use it for additional prompts below in IDE fallback
 
-        // Check for exclude-maintenance flag in CLI args
+        // --- Path Calculation Selection ---
+
+        // Dummy check for maintenance arguments (functionality removed, but argument check remains).
         for (String a : args) {
             if (a.equalsIgnoreCase("-e") || a.equalsIgnoreCase("--exclude-maintenance")) {
-                // Maintenance logic has been removed from the class.
                 System.out.println("NOTE: Maintenance exclusion feature is no longer supported.");
                 break;
             }
         }
 
-        // Ask whether user wants a route that minimizes transfers
+        // Ask user for routing preference (minimum time or minimum transfers).
         boolean minimizeTransfers = false;
         String choice = null;
         if (console != null) {
-            choice = console.readLine("Would you like to minimize transfers? (y/N): ");
+            choice = console.readLine("Would you like to minimize transfers? (Y/N): ");
         } else {
-            System.out.print("Would you like to minimize transfers? (y/N): ");
+            System.out.print("Would you like to minimize transfers? (Y/N): ");
             choice = scanner.hasNextLine() ? scanner.nextLine() : null;
         }
         if (choice != null && (choice.equalsIgnoreCase("y") || choice.equalsIgnoreCase("yes"))) minimizeTransfers = true;
 
         List<Vertex<String>> path;
         if (minimizeTransfers) {
+            // Use specialized Dijkstra's with weights (Transfers and then Time).
             path = bkkRailwayApp.findPathFewestTransfers(start, end);
         } else {
+            // Use standard Dijkstra's minimizing total travel time.
             path = bkkRailwayApp.findShortestPath(start, end);
         }
+
+        // --- Output and Visualization ---
 
         if (path != null) {
             System.out.println((minimizeTransfers ? "Route (minimized transfers)" : "Shortest path") + " from " + start + " to " + end + ":");
@@ -486,16 +513,16 @@ public class Main {
             for (int i = 0; i < path.size() - 1; i++) {
                 Vertex<String> u = path.get(i);
                 Vertex<String> v = path.get(i + 1);
-                Edge<String> edge = bkkRailwayApp.railwayGraph.getEdge(u, v);
+                Edge<String> edge = bkkRailwayApp.TransitGraph.getEdge(u, v);
                 String nextLine = (edge == null) ? "Unknown" : edge.getElement();
 
                 // Get the abbreviated name for printing
                 String abbreviatedV = bkkRailwayApp.applyAbbreviations(v.getElement());
 
                 if (nextLine.equals("Interchange")) {
-                    // This is a transfer edge: print instruction, reset line, and print next station
+                    // Handle the moment of transfer (Interchange Edge)
                     if (!currentLine.isEmpty() && !currentLine.equals("Interchange")) {
-                        // Print summary for the line segment just completed
+                        // End the previous segment and print the summary/transfer action
                         System.out.println("   --> FINISHED Segment (" + stopsOnLine + " stop" + (stopsOnLine != 1 ? "s" : "") + " on " + currentLine + ")");
                         System.out.println("[TRANSFER] Change lines at " + abbreviatedV);
                     }
@@ -503,24 +530,24 @@ public class Main {
                     stopsOnLine = 0;
 
                 } else if (!nextLine.equals(currentLine)) {
-                    // This is the start of a new line segment (not Interchange)
+                    // Handle the start of a new line segment (or first non-Interchange segment)
                     if (!currentLine.isEmpty() && !currentLine.equals("Interchange")) {
-                        // Print summary for the line segment just completed
+                        // End the previous segment and print the transfer/boarding action
                         System.out.println("   --> FINISHED Segment (" + stopsOnLine + " stop" + (stopsOnLine != 1 ? "s" : "") + " on " + currentLine + ")");
                         System.out.println("[TRANSFER] Board " + nextLine + " at " + abbreviatedV);
                     } else if (currentLine.equals("Interchange")) {
-                        // Just completed a transfer/walk, now boarding a new line
+                        // Just finished a transfer, now boarding the next line
                         System.out.println("   --> BOARD " + nextLine + " from " + bkkRailwayApp.applyAbbreviations(u.getElement()));
                     }
                     currentLine = nextLine;
-                    stopsOnLine = 1; // Count the next station now
+                    stopsOnLine = 1;
 
                 } else {
                     // Continue on the same line segment
                     stopsOnLine++;
                 }
 
-                // Print the station being arrived at, only if it's not the last one in the loop (which is printed in the summary)
+                // Print the current station (unless it's the destination, which is handled after the loop)
                 if (i < path.size() - 2) {
                     if (!nextLine.equals("Interchange")) {
                         System.out.println(stepCounter + ". " + abbreviatedV);
@@ -537,13 +564,25 @@ public class Main {
                 System.out.println("   --> FINAL Segment (" + stopsOnLine + " stop" + (stopsOnLine != 1 ? "s" : "") + " on " + currentLine + ")");
             }
 
-            int totalTimeSeconds = bkkRailwayApp.CalculateTotalTime(path);
-            int totalMinutes = totalTimeSeconds / 60;
-            int remainingSeconds = totalTimeSeconds % 60;
+            // Print final summary statistics.
+            int totalTimeMinute = bkkRailwayApp.CalculateTotalTime(path); // This value is in seconds
+
+            int totalHour = totalTimeMinute / 60; // Total number of hours ( 1 hr = 60 minutes)
+            int totalHours = 0;
+            int Minutes;
+
+            if (totalTimeMinute >= 60) { //In case it take more than 60 minute
+                totalHours = totalTimeMinute / 60; // Calculate full hours
+                Minutes = totalTimeMinute % 60; // Calculate remaining minutes
+            } else {
+                // If less than an hour, totalHours is 0
+                Minutes = totalTimeMinute; // All minutes are "remaining"
+            }
+
 
             System.out.println("\n--- Summary ---");
             System.out.println("Total stops: " + (path.size() - 1));
-            System.out.println("Estimated Total Time: " + totalMinutes + " minute(s) and " + remainingSeconds + " second(s)");
+            System.out.println("Estimated Total Time: " + totalHours + " hours(hr) and " + Minutes + " minutes(m)");
         } else {
             System.out.println("No path found from " + start + " to " + end);
         }

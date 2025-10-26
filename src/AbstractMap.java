@@ -5,12 +5,7 @@ public abstract class AbstractMap<K,V> implements Map<K,V>{
     public boolean isEmpty() { return size() == 0;}
 
     //----------nested MapEntry class----------
-    /**
-     * Corrected:
-     * 1. Removed shadowed fields 'k' and 'v'.
-     * 2. Removed overridden getKey(), getValue(), and setKey().
-     * These are now correctly inherited from the parent 'Entry' class.
-     */
+
     public static class MapEntry<K,V> extends Entry<K,V> {
 
         public MapEntry(K key,V value){
