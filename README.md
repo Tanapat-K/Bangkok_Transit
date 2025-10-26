@@ -1,5 +1,7 @@
 # Bangkok Transit Project
 
+## By TANAPAT KANGSADAN ID: 6701013610051
+
 This repository contains the source code for a console application designed to calculate the optimal travel route between any two stations on the Bangkok rail transit system. It leverages graph theory, specifically Dijkstra's algorithm, to minimize either total estimated travel time or the number of transfers.
 
 ## Compilation and Execution
