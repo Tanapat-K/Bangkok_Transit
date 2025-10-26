@@ -348,18 +348,18 @@ public class Main {
     // --- Main Execution Block ---
 
     public static void main (String[] args) {
-        Main bkkRailwayApp = new Main();
+        Main Bangkok_Transit = new Main();
 
         // Load graph data from CSV and print basic statistics for setup verification.
-        bkkRailwayApp.loadConnections("src/BTS/connections.csv");
+        Bangkok_Transit.loadConnections("src/BTS/connections.csv");
 
         System.out.println("--------------Bangkok Transit---------------------  ");
 
         // 1. Prepare and print the station list in a formatted, multi-column display.
         List<String> stationNames = new ArrayList<>();
-        for (Vertex<String> v : bkkRailwayApp.TransitGraph.vertices()) {
+        for (Vertex<String> v : Bangkok_Transit.TransitGraph.vertices()) {
             // Apply abbreviation for display
-            stationNames.add(bkkRailwayApp.applyAbbreviations(v.getElement()));
+            stationNames.add(Bangkok_Transit.applyAbbreviations(v.getElement()));
         }
 
         int totalStations = stationNames.size();
@@ -430,7 +430,7 @@ public class Main {
                 if (scanner != null) scanner.close();
                 return;
             }
-            if (bkkRailwayApp.checkStationAvailable(input)) {
+            if (Bangkok_Transit.checkStationAvailable(input)) {
                 // Convert input (which might be an abbreviation) back to the official full name for pathfinding.
                 start = ABBREVIATION_MAP.entrySet().stream()
                         .filter(e -> e.getValue().equals(input.trim()))
@@ -456,7 +456,7 @@ public class Main {
                 if (scanner != null) scanner.close();
                 return;
             }
-            if (bkkRailwayApp.checkStationAvailable(input)) {
+            if (Bangkok_Transit.checkStationAvailable(input)) {
                 // Convert input (which might be an abbreviation) back to the official full name for pathfinding.
                 end = ABBREVIATION_MAP.entrySet().stream()
                         .filter(e -> e.getValue().equals(input.trim()))
@@ -491,10 +491,10 @@ public class Main {
         List<Vertex<String>> path;
         if (minimizeTransfers) {
             // Use specialized Dijkstra's with weights (Transfers and then Time).
-            path = bkkRailwayApp.findPathFewestTransfers(start, end);
+            path = Bangkok_Transit.findPathFewestTransfers(start, end);
         } else {
             // Use standard Dijkstra's minimizing total travel time.
-            path = bkkRailwayApp.findShortestPath(start, end);
+            path = Bangkok_Transit.findShortestPath(start, end);
         }
 
         // --- Output and Visualization ---
@@ -507,17 +507,17 @@ public class Main {
             int stopsOnLine = 0;
 
             // Print the starting station outside the loop
-            System.out.println(stepCounter + ". " + bkkRailwayApp.applyAbbreviations(path.get(0).getElement()) + " (Start)");
+            System.out.println(stepCounter + ". " + Bangkok_Transit.applyAbbreviations(path.get(0).getElement()) + " (Start)");
             stepCounter++;
 
             for (int i = 0; i < path.size() - 1; i++) {
                 Vertex<String> u = path.get(i);
                 Vertex<String> v = path.get(i + 1);
-                Edge<String> edge = bkkRailwayApp.TransitGraph.getEdge(u, v);
+                Edge<String> edge = Bangkok_Transit.TransitGraph.getEdge(u, v);
                 String nextLine = (edge == null) ? "Unknown" : edge.getElement();
 
                 // Get the abbreviated name for printing
-                String abbreviatedV = bkkRailwayApp.applyAbbreviations(v.getElement());
+                String abbreviatedV = Bangkok_Transit.applyAbbreviations(v.getElement());
 
                 if (nextLine.equals("Interchange")) {
                     // Handle the moment of transfer (Interchange Edge)
@@ -537,7 +537,7 @@ public class Main {
                         System.out.println("[TRANSFER] Board " + nextLine + " at " + abbreviatedV);
                     } else if (currentLine.equals("Interchange")) {
                         // Just finished a transfer, now boarding the next line
-                        System.out.println("   --> BOARD " + nextLine + " from " + bkkRailwayApp.applyAbbreviations(u.getElement()));
+                        System.out.println("   --> BOARD " + nextLine + " from " + Bangkok_Transit.applyAbbreviations(u.getElement()));
                     }
                     currentLine = nextLine;
                     stopsOnLine = 1;
@@ -557,7 +557,7 @@ public class Main {
             }
 
             // Print the FINAL destination station
-            System.out.println(stepCounter + ". " + bkkRailwayApp.applyAbbreviations(path.get(path.size() - 1).getElement()) + " (Destination)");
+            System.out.println(stepCounter + ". " + Bangkok_Transit.applyAbbreviations(path.get(path.size() - 1).getElement()) + " (Destination)");
 
             // Print summary for the final segment
             if (!currentLine.equals("Interchange")) {
@@ -565,7 +565,7 @@ public class Main {
             }
 
             // Print final summary statistics.
-            int totalTimeMinute = bkkRailwayApp.CalculateTotalTime(path); // This value is in seconds
+            int totalTimeMinute = Bangkok_Transit.CalculateTotalTime(path); // This value is in seconds
 
             int totalHour = totalTimeMinute / 60; // Total number of hours ( 1 hr = 60 minutes)
             int totalHours = 0;
