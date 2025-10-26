@@ -105,12 +105,12 @@ Dijkstra's algorithm is a greedy algorithm. In every iteration, it choose the un
 The PQ ( Heap.java ) makes this selection process efficient:
 Selection Time: Using a standard array or list would require scanning all Vertex (V) unvisited vertices to find the minimum, taking O(V) time per step. The Priority Queue, however, finds and removes this minimum vertex using its removeMin() operation in only O(log V) time.
 
-####Total Cost Savings:
+#### Total Cost Savings:
 The algorithm runs for (V) total steps (once for each vertex).
 It processes (E) total edges (relaxations).
 Since the PQ handles the selection in O(log V) and also handles distance updates (effectively re-insertions) in O(log V), the overall complexity of Dijkstra's algorithm becomesO(E log V).
 This O(E log V) complexity is far superior to the O(V2) complexity achieved if a simple array were used, especially in large graphs. For the Bangkok transit network, even though (V) is relatively small, this guarantee of efficiency is the primary reason the PQ is essential for practical pathfinding.
-###Application in Code
+### Application in Code
 The PQ handles two distinct types of weights efficiently:
 Minimizing Time (findShortestPath): The PQ sorts integer values (accumulated time), instantly retrieving the path with the shortest time.
 Minimizing Transfers (findPathFewestTransfers): The PQ sorts DistancePair objects (lexicographic weight), instantly retrieving the path that satisfies the primary constraint (fewest transfers) before checking the secondary constraint (time). The O( log V) efficiency is maintained even with the complex sorting logic.
