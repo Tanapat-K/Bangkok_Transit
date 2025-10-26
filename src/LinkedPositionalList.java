@@ -2,8 +2,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 
-// The main class now only implements PositionalList<E>
-// and its iterator() method must be changed to return E
+
 public class LinkedPositionalList<E> implements PositionalList<E> {
 
     // ------------------- NEW NESTED CLASS -------------------

@@ -352,9 +352,8 @@ public class Main {
 
         // Load graph data from CSV and print basic statistics for setup verification.
         bkkRailwayApp.loadConnections("src/BTS/connections.csv");
-        System.out.println("Number of stations (vertices): " + bkkRailwayApp.TransitGraph.numVertices());
-        System.out.println("Number of connections (edges): " + bkkRailwayApp.TransitGraph.numEdges());
-        System.out.println();
+
+        System.out.println("--------------Bangkok Transit---------------------  ");
 
         // 1. Prepare and print the station list in a formatted, multi-column display.
         List<String> stationNames = new ArrayList<>();
@@ -368,7 +367,8 @@ public class Main {
         int stationsPerColumn = (int) Math.ceil((double) totalStations / numColumns);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("Station List (Total: " + totalStations + ")\n");
+        sb.append("Station operating List (Total: " + totalStations + ")\n\n");
+
         for (int i = 0; i < stationsPerColumn; i++) {
             // Column 1
             if (i < totalStations) {
