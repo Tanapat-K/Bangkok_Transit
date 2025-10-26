@@ -15,17 +15,22 @@ The project assumes a specific directory structure (e.g., src/BTS/connections.cs
 Compilation Steps
 Gather Helper Files: Ensure all necessary interfaces and abstract classes are present:
 
-AbstractHashMap.java, AbstractMap.java
-
+AbstractHashMap.java 
+AbstractMap.java
 AdjacencyMapGraph.java
-
 DefaultComparator.java
-
-Edge.java, Entry.java, Entry2.java, Graph.java, Heap.java
-
-LinkedPositionalList.java, Map.java, Position.java, PositionalList.java, PriorityQueue.java
-
-ProbeHashMap.java, Vertex.java
+Edge.java 
+Entry.java 
+Entry2.java 
+Graph.java 
+Heap.java
+LinkedPositionalList.java 
+Map.java 
+Position.java 
+PositionalList.java 
+PriorityQueue.java
+ProbeHashMap.java
+Vertex.java
 
 ## Compilation
 : Compile all .java files from your project root or src directory. If using IntelliJ IDEA, simply building the project handles this automatically.
